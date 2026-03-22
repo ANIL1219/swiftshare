@@ -1107,5 +1107,126 @@ function drawQR(url){
 setTimeout(()=>toast('i','⚡','Create a hall to start sharing!'),1000);
 </script>
 <script src="/swiftshare-engine.js"></script>
+<script>
+// Real WebRTC Engine Connect
+const engine = new SwiftShareEngine({
+  serverUrl: 'https://swiftshare-khuw.onrender.com',
+  onPeerJoined: ({id, name}) => {
+    addPeer(id, name, 'Peer');
+    toast('s', '📱', name + ' joined the hall!');
+  },
+  onPeerLeft: ({id, name}) => {
+    delete S.peers[id];
+    renderDeviceList();
+    toast('i', '👋', name + ' left');
+  },
+  onFileReceived: ({name, path, size, url, from}) => {
+    addReceivedFileReal({name, path, size, url}, from);
+  },
+  onProgress: ({fileId, pct}) => {
+    const item = S.queue.find(q => q.id === fileId);
+    if(item) setFileStatus(item, 'sending', pct);
+  },
+  onTransferDone: () => {
+    toast('s', '✅', 'All files received!');
+  }
+});
+
+// Override createRoom to use real engine
+const _origCreate = createHall;
+window.createHall = async function(){
+  const code = rndCode();
+  S.hall = code;
+  S.isHost = true;
+  setConnected(true);
+  document.getElementById('room-code').textContent = code;
+  refreshUrl();
+  document.getElementById('qr-section').style.display = 'flex';
+  document.getElementById('send-btn').disabled = false;
+  toast('s', '🎉', 'Hall created!');
+  addSelf();
+  // Real connection
+  await engine.connect();
+  engine.joinHall(code, S.myName, navigator.userAgent);
+};
+
+// Override joinHall
+window.joinHall = async function(){
+  const v = document.getElementById('join-input').value.trim().toUpperCase();
+  if(v.length < 6){ toast('e','⚠️','Enter full 6-character code'); return; }
+  S.hall = v;
+  S.isHost = false;
+  setConnected(true);
+  document.getElementById('room-code').textContent = v;
+  refreshUrl();
+  document.getElementById('qr-section').style.display = 'flex';
+  document.getElementById('send-btn').disabled = false;
+  toast('i', '🔗', 'Joining hall ' + v + '...');
+  addSelf();
+  // Real connection
+  await engine.connect();
+  engine.joinHall(v, S.myName, navigator.userAgent);
+};
+
+// Override sendFiles to use real engine
+window.startTransfer = async function(){
+  if(!S.hall){ toast('e','⚠️','Create or join a hall first!'); return; }
+  if(S.queue.length === 0){ toast('e','⚠️','No files queued'); return; }
+  if(S.sending) return;
+  S.sending = true;
+  document.getElementById('send-btn').disabled = true;
+  document.getElementById('glob-prog').style.display = 'block';
+  S.queue.forEach(item => setFileStatus(item, 'queued', 0));
+  try {
+    await engine.sendFiles(
+      S.queue.map(q => ({id: q.id, file: q.file, path: q.path})),
+      document.getElementById('target-sel').value === 'all' ? undefined : document.getElementById('target-sel').value,
+      ({id, pct}) => {
+        const item = S.queue.find(q => q.id === id);
+        if(item){
+          setFileStatus(item, pct < 100 ? 'sending' : 'done', pct);
+          updateGlobalProgress();
+        }
+      }
+    );
+    S.filesSent += S.queue.length;
+    S.bytesSent += S.totalBytes;
+    updateSessionStats();
+    toast('s', '✅', 'All files transferred!');
+  } catch(e) {
+    toast('e', '❌', 'Transfer failed: ' + e.message);
+  }
+  S.sending = false;
+  document.getElementById('send-btn').disabled = false;
+};
+
+function updateGlobalProgress(){
+  const done = S.queue.filter(q => q.status === 'done').length;
+  const pct = Math.round((done / S.queue.length) * 100);
+  document.getElementById('glob-fill').style.width = pct + '%';
+  document.getElementById('glob-pct').textContent = pct + '%';
+  document.getElementById('glob-done').textContent = done + ' / ' + S.queue.length + ' files';
+}
+
+function addReceivedFileReal(item, fromName){
+  recvCount++;
+  const list = document.getElementById('recv-list');
+  if(list.querySelector('.empty-box')) list.innerHTML = '';
+  const [col, ext] = extColor(item.name);
+  const div = document.createElement('div');
+  div.className = 'recv-item';
+  div.innerHTML = `
+    <span class="ext-badge" style="background:${col}22;color:${col};font-size:.7rem;padding:4px 6px;border-radius:6px;">${ext}</span>
+    <div class="recv-meta">
+      <div class="recv-name">${item.name}</div>
+      <div class="recv-info">${fmtSize(item.size)}</div>
+      <div class="recv-from">from ${fromName}</div>
+    </div>
+    <a href="${item.url}" download="${item.name}" class="btn btn-ghost btn-sm">⬇ Save</a>
+  `;
+  list.insertBefore(div, list.firstChild);
+  document.getElementById('recv-count-lbl').textContent = recvCount + ' file' + (recvCount > 1 ? 's' : '') + ' received';
+}
+</script>
 </body>
 </html>
