@@ -23,7 +23,26 @@ class SwiftShareEngine {
 
     this.socket      = null;
     this.peers       = {};   // peerId → { conn, channel, name }
-    this.iceServers  = [];
+    this.iceServers = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  {
+    urls: 'turn:relay.metered.ca:80',
+    username: '52109bf88d32aa6c12b79b28',
+    credential: 'YboRmeGlGODhcXGR'
+  },
+  {
+    urls: 'turn:relay.metered.ca:443',
+    username: '52109bf88d32aa6c12b79b28',
+    credential: 'YboRmeGlGODhcXGR'
+  },
+  {
+    urls: 'turns:relay.metered.ca:443',
+    username: '52109bf88d32aa6c12b79b28',
+    credential: 'YboRmeGlGODhcXGR'
+  }
+];
+
     this.hallCode    = null;
     this.myId        = null;
 
