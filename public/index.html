@@ -1111,7 +1111,8 @@ setTimeout(()=>toast('i','⚡','Create a hall to start sharing!'),1000);
 <script>
 // Real WebRTC Engine Connect
 const engine = new SwiftShareEngine({
-  serverUrl: 'https://swiftshare-khuw.onrender.com',
+  serverUrl: 'https://swiftshare-1.onrender.com',
+  // serverUrl: 'https://swiftshare-khuw.onrender.com',
   onPeerJoined: ({id, name}) => {
     addPeer(id, name, 'Peer');
     toast('s', '📱', name + ' joined the hall!');
