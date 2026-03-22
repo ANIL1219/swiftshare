@@ -1,5 +1,5 @@
 /**
- * SwiftShare — WebRTC P2P Transfer Engine
+ * SwiftShare — WebRTC P2P Transfer Engine v2 FIXED
  * Include this in your frontend HTML before closing </body>
  *
  * Handles:
@@ -23,26 +23,7 @@ class SwiftShareEngine {
 
     this.socket      = null;
     this.peers       = {};   // peerId → { conn, channel, name }
-    this.iceServers = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
-  {
-    urls: 'turn:relay.metered.ca:80',
-    username: '52109bf88d32aa6c12b79b28',
-    credential: 'YboRmeGlGODhcXGR'
-  },
-  {
-    urls: 'turn:relay.metered.ca:443',
-    username: '52109bf88d32aa6c12b79b28',
-    credential: 'YboRmeGlGODhcXGR'
-  },
-  {
-    urls: 'turns:relay.metered.ca:443',
-    username: '52109bf88d32aa6c12b79b28',
-    credential: 'YboRmeGlGODhcXGR'
-  }
-];
-
+    this.iceServers  = [];
     this.hallCode    = null;
     this.myId        = null;
 
@@ -51,22 +32,24 @@ class SwiftShareEngine {
   }
 
   /* ── CONNECT TO SERVER ───────────────────── */
- async connect() {
+  async connect() {
     return new Promise((resolve, reject) => {
-      if (typeof io === 'undefined') {
-        reject(new Error('Socket.IO not loaded'));
-        return;
-      }
-      this.socket = io(this.serverUrl, { transports: ['websocket'] });
-      this._bindSocketEvents();
-      this.socket.on('connect', () => {
-        this.myId = this.socket.id;
-        resolve(this.socket.id);
-      });
-      this.socket.on('connect_error', reject);
+      // Dynamically load Socket.IO from server
+      const script = document.createElement('script');
+      script.src = this.serverUrl + '/socket.io/socket.io.js';
+      script.onload = () => {
+        this.socket = io(this.serverUrl, { transports: ['websocket'] });
+        this._bindSocketEvents();
+        this.socket.on('connect', () => {
+          this.myId = this.socket.id;
+          resolve(this.socket.id);
+        });
+        this.socket.on('connect_error', reject);
+      };
+      script.onerror = reject;
+      document.head.appendChild(script);
     });
   }
-
 
   /* ── JOIN HALL ───────────────────────────── */
   joinHall(hallCode, name, deviceType) {
