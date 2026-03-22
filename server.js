@@ -38,26 +38,23 @@ app.get('/', (req,res) => res.sendFile(path.join(__dirname,'public','index.html'
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:stun2.l.google.com:19302' },
-  // Add TURN server here for NAT traversal (company networks):
-  // {
-  //   urls:       'turn:your-turn-server.com:3478',
-  //   username:   'username',
-  //   credential: 'password',
-  // }
+  {
+    urls: 'turn:relay.metered.ca:80',
+    username: '52109bf88d32aa6c12b79b28',
+    credential: 'YboRmeGlGODhcXGR'
+  },
+  {
+    urls: 'turn:relay.metered.ca:443',
+    username: '52109bf88d32aa6c12b79b28',
+    credential: 'YboRmeGlGODhcXGR'
+  },
+  {
+    urls: 'turns:relay.metered.ca:443',
+    username: '52109bf88d32aa6c12b79b28',
+    credential: 'YboRmeGlGODhcXGR'
+  }
 ];
 
-/* ─────────────────────────────────────────────
-   HALL STATE
-   halls = {
-     hallCode: {
-       createdAt: Date,
-       peers: {
-         socketId: { name, deviceType, joinedAt }
-       }
-     }
-   }
-   ───────────────────────────────────────────── */
 const halls = {};
 
 function getOrCreateHall(code) {
