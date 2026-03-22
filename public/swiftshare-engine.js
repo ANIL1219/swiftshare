@@ -32,24 +32,22 @@ class SwiftShareEngine {
   }
 
   /* ── CONNECT TO SERVER ───────────────────── */
-  async connect() {
+ async connect() {
     return new Promise((resolve, reject) => {
-      // Dynamically load Socket.IO from server
-      const script = document.createElement('script');
-      script.src = this.serverUrl + '/socket.io/socket.io.js';
-      script.onload = () => {
-        this.socket = io(this.serverUrl, { transports: ['websocket'] });
-        this._bindSocketEvents();
-        this.socket.on('connect', () => {
-          this.myId = this.socket.id;
-          resolve(this.socket.id);
-        });
-        this.socket.on('connect_error', reject);
-      };
-      script.onerror = reject;
-      document.head.appendChild(script);
+      if (typeof io === 'undefined') {
+        reject(new Error('Socket.IO not loaded'));
+        return;
+      }
+      this.socket = io(this.serverUrl, { transports: ['websocket'] });
+      this._bindSocketEvents();
+      this.socket.on('connect', () => {
+        this.myId = this.socket.id;
+        resolve(this.socket.id);
+      });
+      this.socket.on('connect_error', reject);
     });
   }
+
 
   /* ── JOIN HALL ───────────────────────────── */
   joinHall(hallCode, name, deviceType) {
