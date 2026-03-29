@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>SwiftShare — Hall Transfer</title>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
 <style>
 :root{--bg:#050810;--bg1:#090e1a;--bg2:#0d1425;--bg3:#111b33;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);--a1:#4f8eff;--a2:#00e5ff;--a3:#00ffb3;--a4:#ff6b6b;--a5:#ffd166;--text:#e8edf5;--text2:#7a8aaa;--text3:#3a4a6a;--mono:'JetBrains Mono',monospace;--sans:'Space Grotesk',sans-serif;--r:12px;--r2:18px;}
@@ -171,7 +172,8 @@ main{flex:1;display:grid;grid-template-columns:340px 1fr;gap:16px;max-width:1300
           <div class="room-hint">Tap code to copy · Share with everyone</div>
         </div>
         <div class="qr-row" id="qr-section" style="display:none;">
-          <div class="qr-wrap"><canvas id="qr-canvas" width="70" height="70"></canvas></div>
+          <!-- <div class="qr-wrap"><canvas id="qr-canvas" width="70" height="70"></canvas></div> -->
+          <div class="qr-wrap" id="qr-wrap"></div>
           <div class="qr-meta">
             <h4>Scan to Join</h4>
             <p>Any phone, tablet, PC — open in browser, no app needed</p>
@@ -623,12 +625,16 @@ function addReceivedFile(item, fromName) {
 
 // ===== QR =====
 function drawQR(url) {
-  const c = document.getElementById('qr-canvas');
-  const ctx = c.getContext('2d');
-  ctx.fillStyle='#fff'; ctx.fillRect(0,0,70,70); ctx.fillStyle='#000';
-  [[2,2],[2,54],[54,2]].forEach(([x,y])=>{ctx.fillRect(x,y,14,14);ctx.fillStyle='#fff';ctx.fillRect(x+2,y+2,10,10);ctx.fillStyle='#000';ctx.fillRect(x+4,y+4,6,6);});
-  const seed = url.split('').reduce((a,c,i)=>((a<<5)-a)+c.charCodeAt(0)*i,0);
-  for(let i=0;i<70;i+=3.5){for(let j=0;j<70;j+=3.5){const bx=Math.round(i/3.5),by=Math.round(j/3.5);if((bx<5&&by<5)||(bx>14&&by<5)||(bx<5&&by>14))continue;if((seed*bx*7+by*13+bx+by)%3===0)ctx.fillRect(i,j,3,3);}}
+  const wrap = document.getElementById('qr-wrap');
+  wrap.innerHTML = '';
+  new QRCode(wrap, {
+    text: url,
+    width: 70,
+    height: 70,
+    colorDark: '#000000',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
 }
 
 // ===== URL PARAMS =====
