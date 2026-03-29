@@ -619,16 +619,25 @@ function drawQR(url) {
 }
 
 // ===== URL PARAMS =====
-(()=>{
-  const p = new URLSearchParams(location.search);
-  const h = p.get('hall');
-  if (h) { document.getElementById('join-input').value = h; toast('i','🔗','Hall code detected — click Join!'); }
-  let ti = setInterval(()=>{
-    if (S.hall) { clearInterval(ti); return; }
-    document.getElementById('room-code').textContent = Array(6).fill(0).map(()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.random()*32|0]).join('');
-    document.getElementById('room-code').style.opacity = '.15';
-  }, 400);
-})();
+// (()=>{
+//   const p = new URLSearchParams(location.search);
+//   const h = p.get('hall');
+//   if (h) { document.getElementById('join-input').value = h; toast('i','🔗','Hall code detected — click Join!'); }
+//   let ti = setInterval(()=>{
+//     if (S.hall) { clearInterval(ti); return; }
+//     document.getElementById('room-code').textContent = Array(6).fill(0).map(()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.random()*32|0]).join('');
+//     document.getElementById('room-code').style.opacity = '.15';
+//   }, 400);
+// })();
+const p = new URLSearchParams(location.search);
+const h = p.get('hall');
+if (h) {
+  document.getElementById('join-input').value = h;
+  // Auto join after page loads
+  setTimeout(async () => {
+    await joinHall();
+  }, 1500);
+}
 
 setTimeout(()=>toast('i','⚡','Create a hall to start sharing!'), 1000);
 </script>
