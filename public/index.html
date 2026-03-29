@@ -282,66 +282,40 @@ const S = {
 // ===== DEVICE DETECTION =====
 function detectDevice() {
   const ua = navigator.userAgent;
-
-  // iPhone
   if (/iPhone/.test(ua)) {
     const match = ua.match(/iPhone OS ([\d_]+)/);
     return 'iPhone' + (match ? ' (iOS ' + match[1].replace(/_/g, '.') + ')' : '');
   }
-
-  // iPad
   if (/iPad/.test(ua)) {
     const match = ua.match(/CPU OS ([\d_]+)/);
     return 'iPad' + (match ? ' (iPadOS ' + match[1].replace(/_/g, '.') + ')' : '');
   }
-
-  // Android — multiple regex patterns to handle all OEM formats
   if (/Android/.test(ua)) {
-    // Pattern 1 (most common): Mozilla/5.0 (Linux; Android 13; Infinix GT 20 Pro Build/...)
-    // Pattern 2 (some OEMs):   Mozilla/5.0 (Linux; Android 13; SM-S918B) ...
-    // Pattern 3 (Chrome):      Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) ...
-
     const patterns = [
-      /Android\s[\d.]+;\s([^)]+?)\s+Build\//,   // with "Build/"
-      /Android\s[\d.]+;\s([^)]+?)\)/,            // ends with ")"
-      /Android\/[\d.]+;\s([^)]+?)\s+Build\//,    // "Android/" slash variant
+      /Android\s[\d.]+;\s([^)]+?)\s+Build\//,
+      /Android\s[\d.]+;\s([^)]+?)\)/,
+      /Android\/[\d.]+;\s([^)]+?)\s+Build\//,
     ];
-
     for (const re of patterns) {
       const m = ua.match(re);
       if (m) {
-        let model = m[1].trim();
-        // Clean up junk prefixes some OEMs add
-        model = model.replace(/^K\s+/i, '').replace(/;\s*wv$/, '').trim();
+        let model = m[1].trim().replace(/^K\s+/i, '').replace(/;\s*wv$/, '').trim();
         if (model.length > 1 && !/^android$/i.test(model)) return model;
       }
     }
-
-    // Fallback: grab Android version at least
     const ver = ua.match(/Android\s([\d.]+)/);
     return ver ? 'Android ' + ver[1] : 'Android';
   }
-
-  // Windows
   if (/Windows/.test(ua)) {
     const match = ua.match(/Windows NT ([\d.]+)/);
-    const versions = {
-      '10.0': 'Windows 10/11',
-      '6.3':  'Windows 8.1',
-      '6.2':  'Windows 8',
-      '6.1':  'Windows 7'
-    };
+    const versions = { '10.0': 'Windows 10/11', '6.3': 'Windows 8.1', '6.2': 'Windows 8', '6.1': 'Windows 7' };
     return versions[match?.[1]] || 'Windows PC';
   }
-
-  // Mac
   if (/Macintosh/.test(ua)) {
     const match = ua.match(/Mac OS X ([\d_]+)/);
     return 'MacBook' + (match ? ' (macOS ' + match[1].replace(/_/g, '.') + ')' : '');
   }
-
   if (/Linux/.test(ua)) return 'Linux PC';
-
   return 'Device';
 }
 
@@ -387,32 +361,49 @@ function setConnected(ok) {
 // ===== ENGINE =====
 const engine = new SwiftShareEngine({
   serverUrl: 'https://swiftshare-1.onrender.com',
+
+  onConnectionChange: ({ connected }) => {
+    setConnected(connected);
+    if (!connected) {
+      toast('i', '🔄', 'Connection lost — reconnecting…');
+    } else if (S.hall) {
+      toast('s', '✅', 'Reconnected to hall ' + S.hall);
+    }
+  },
+
   onPeerJoined: ({id, name}) => {
     S.peers[id] = {name};
     renderDeviceList();
     refreshTargetSelect();
     toast('s', deviceIcon(name), name + ' joined the hall!');
   },
+
   onPeerLeft: ({id, name}) => {
     delete S.peers[id];
     renderDeviceList();
     refreshTargetSelect();
     toast('i', '👋', name + ' left');
   },
+
   onFileReceived: ({name, path, size, url, from}) => {
     addReceivedFile({name, path, size, url}, from);
   },
+
   onProgress: ({fileId, pct, sending}) => {
     if (sending) {
-      // Update sender progress
       const item = S.queue.find(q => q.id === fileId);
       if (item) setFileStatus(item, pct < 100 ? 'sending' : 'done', pct);
       updateGlobalProgress();
+    } else {
+      document.getElementById('recv-count-lbl').textContent = 'Receiving… ' + pct + '%';
     }
   },
-  onTransferDone: () => {
-    toast('s', '✅', 'Transfer complete!');
-  }
+
+  onTransferDone: ({ fromName }) => {
+    document.getElementById('recv-count-lbl').textContent =
+      recvCount + ' file' + (recvCount > 1 ? 's' : '') + ' received';
+    toast('s', '✅', 'Transfer complete from ' + (fromName || 'peer') + '!');
+  },
 });
 
 // ===== HALL =====
