@@ -263,26 +263,39 @@ const S = {
 // ===== DEVICE DETECTION =====
 function detectDevice() {
   const ua = navigator.userAgent;
-  // Get device brand/model
-  if (/iPhone/.test(ua)) return 'iPhone';
+  
+  // iPhone
+  if (/iPhone/.test(ua)) {
+    const match = ua.match(/iPhone OS ([\d_]+)/);
+    return 'iPhone' + (match ? ' (iOS '+match[1].replace(/_/g,'.')+')' : '');
+  }
+  
+  // iPad
   if (/iPad/.test(ua)) return 'iPad';
-  // Android device name
-  const androidMatch = ua.match(/Android[^;]*;\s*([^)]+)\)/);
-  if (androidMatch) {
-    let name = androidMatch[1].trim();
-    // Clean up the name
-    name = name.replace(/Build\/.+/, '').trim();
-    // Remove trailing semicolons
-    name = name.split(';').pop().trim();
-    if (name.length > 2) return name;
+  
+  // Android — extract exact model name
+  if (/Android/.test(ua)) {
+    // UA format: Mozilla/5.0 (Linux; Android 13; Infinix GT 20 Pro Build/...)
+    const match = ua.match(/Android[\s\/][\d.]+;\s*([^)^;]+?)(?:\s*Build|[);])/);
+    if (match) {
+      let model = match[1].trim();
+      // Remove extra junk
+      model = model.replace(/^\s*K\s+/,'').trim();
+      if (model.length > 1) return model;
+    }
     return 'Android';
   }
-  if (/Windows NT/.test(ua)) {
-    const hostname = navigator.platform || 'Windows PC';
-    return hostname;
+  
+  // Windows — get computer name if possible
+  if (/Windows/.test(ua)) {
+    const match = ua.match(/Windows NT ([\d.]+)/);
+    const versions = {'10.0':'Windows 11/10','6.3':'Windows 8.1','6.2':'Windows 8','6.1':'Windows 7'};
+    return versions[match?.[1]] || 'Windows PC';
   }
+  
   if (/Macintosh/.test(ua)) return 'MacBook';
   if (/Linux/.test(ua)) return 'Linux PC';
+  
   return 'Device';
 }
 
