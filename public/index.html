@@ -6,6 +6,23 @@
 <title>SwiftShare — Hall Transfer</title>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+function getDeviceName() {
+  let saved = localStorage.getItem('swift_name');
+  if (saved) return saved;
+
+  let defaultName = "My Device";
+
+  if (/android/i.test(navigator.userAgent)) defaultName = "Android Phone";
+  else if (/windows/i.test(navigator.userAgent)) defaultName = "Windows PC";
+  else if (/iphone/i.test(navigator.userAgent)) defaultName = "iPhone";
+
+  let name = prompt("Enter your device name:", defaultName) || defaultName;
+
+  localStorage.setItem('swift_name', name);
+  return name;
+}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
 <style>
 :root{--bg:#050810;--bg1:#090e1a;--bg2:#0d1425;--bg3:#111b33;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);--a1:#4f8eff;--a2:#00e5ff;--a3:#00ffb3;--a4:#ff6b6b;--a5:#ffd166;--text:#e8edf5;--text2:#7a8aaa;--text3:#3a4a6a;--mono:'JetBrains Mono',monospace;--sans:'Space Grotesk',sans-serif;--r:12px;--r2:18px;}
@@ -265,39 +282,66 @@ const S = {
 // ===== DEVICE DETECTION =====
 function detectDevice() {
   const ua = navigator.userAgent;
-  
+
   // iPhone
   if (/iPhone/.test(ua)) {
     const match = ua.match(/iPhone OS ([\d_]+)/);
-    return 'iPhone' + (match ? ' (iOS '+match[1].replace(/_/g,'.')+')' : '');
+    return 'iPhone' + (match ? ' (iOS ' + match[1].replace(/_/g, '.') + ')' : '');
   }
-  
+
   // iPad
-  if (/iPad/.test(ua)) return 'iPad';
-  
-  // Android — extract exact model name
-  if (/Android/.test(ua)) {
-    // UA format: Mozilla/5.0 (Linux; Android 13; Infinix GT 20 Pro Build/...)
-    const match = ua.match(/Android[\s\/][\d.]+;\s*([^)^;]+?)(?:\s*Build|[);])/);
-    if (match) {
-      let model = match[1].trim();
-      // Remove extra junk
-      model = model.replace(/^\s*K\s+/,'').trim();
-      if (model.length > 1) return model;
-    }
-    return 'Android';
+  if (/iPad/.test(ua)) {
+    const match = ua.match(/CPU OS ([\d_]+)/);
+    return 'iPad' + (match ? ' (iPadOS ' + match[1].replace(/_/g, '.') + ')' : '');
   }
-  
-  // Windows — get computer name if possible
+
+  // Android — multiple regex patterns to handle all OEM formats
+  if (/Android/.test(ua)) {
+    // Pattern 1 (most common): Mozilla/5.0 (Linux; Android 13; Infinix GT 20 Pro Build/...)
+    // Pattern 2 (some OEMs):   Mozilla/5.0 (Linux; Android 13; SM-S918B) ...
+    // Pattern 3 (Chrome):      Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) ...
+
+    const patterns = [
+      /Android\s[\d.]+;\s([^)]+?)\s+Build\//,   // with "Build/"
+      /Android\s[\d.]+;\s([^)]+?)\)/,            // ends with ")"
+      /Android\/[\d.]+;\s([^)]+?)\s+Build\//,    // "Android/" slash variant
+    ];
+
+    for (const re of patterns) {
+      const m = ua.match(re);
+      if (m) {
+        let model = m[1].trim();
+        // Clean up junk prefixes some OEMs add
+        model = model.replace(/^K\s+/i, '').replace(/;\s*wv$/, '').trim();
+        if (model.length > 1 && !/^android$/i.test(model)) return model;
+      }
+    }
+
+    // Fallback: grab Android version at least
+    const ver = ua.match(/Android\s([\d.]+)/);
+    return ver ? 'Android ' + ver[1] : 'Android';
+  }
+
+  // Windows
   if (/Windows/.test(ua)) {
     const match = ua.match(/Windows NT ([\d.]+)/);
-    const versions = {'10.0':'Windows 11/10','6.3':'Windows 8.1','6.2':'Windows 8','6.1':'Windows 7'};
+    const versions = {
+      '10.0': 'Windows 10/11',
+      '6.3':  'Windows 8.1',
+      '6.2':  'Windows 8',
+      '6.1':  'Windows 7'
+    };
     return versions[match?.[1]] || 'Windows PC';
   }
-  
-  if (/Macintosh/.test(ua)) return 'MacBook';
+
+  // Mac
+  if (/Macintosh/.test(ua)) {
+    const match = ua.match(/Mac OS X ([\d_]+)/);
+    return 'MacBook' + (match ? ' (macOS ' + match[1].replace(/_/g, '.') + ')' : '');
+  }
+
   if (/Linux/.test(ua)) return 'Linux PC';
-  
+
   return 'Device';
 }
 
